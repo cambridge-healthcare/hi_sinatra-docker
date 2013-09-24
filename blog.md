@@ -2,7 +2,7 @@
 
 This is our story of making Docker an essential component of our
 continuous delivery environment and the lessons that we've learned along
-the way. We have been using dockor in our staging environment for a month
+the way. We have been using Docker in our staging environment for a month
 now and are planning to make it part of our production setup once the
 first stable version gets released. We'll be discussing the staging
 environment setup today with the promise of following up on the
