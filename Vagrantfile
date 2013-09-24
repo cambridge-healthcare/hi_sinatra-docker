@@ -6,7 +6,7 @@ BOX_URI = ENV['BOX_URI'] || "http://files.vagrantup.com/precise64.box"
 VF_BOX_URI = ENV['BOX_URI'] || "http://files.vagrantup.com/precise64_vmware_fusion.box"
 
 DOCKER_PORTS = (49_153..50_000)
-JENKINS_PORT = 8_080
+JENKINS_PORT = 8080
 
 Vagrant::Config.run do |config|
   # Setup virtual machine box. This VM configuration code is always executed.
