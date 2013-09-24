@@ -136,21 +136,21 @@ Finished: SUCCESS
 While the first build takes 2 mins and 26 secs, the second one takes a
 mere 5 secs. That is **5 seconds** to install all the ruby gems, run all
 the tests, build a Docker image and start a new Docker container which
-makes that app version available for further testing (think integration
-tests, stress tests) or simply ready for production. Worth mentioning is
-that the resulting app image is a mere **12.29kB**. That's the only new
-content which needs deploying into production.
+makes that app version available for further testing (eg. integration
+tests, stress tests), or simply ready for production. The resulting app
+image is a mere **12.29kB**. That's the only new content which needs
+deploying into production.
 
 #### github service hooks
 
 For integrating github with a Jenkins server not accessible from the
-outside world, we have found Amazon SQS to be a rather elegant solution.
+outside world, we have found Amazon SQS to be an elegant solution.
 There is an SQS plugin that is installable from within Jenkins, setup is
 straightforward.
 
-The only gotcha worth mentioning is that the SQS must be setup in the
-**us-east-1** region. We had initially set it up in eu-west-1 and were
-puzzled as to why it wasn't working.
+The only gotcha is that the SQS must be setup in the **us-east-1**
+region. We had set it up initially in eu-west-1 and were puzzled as to
+why it wasn't working.
 
 #### "How are you?" base Docker images
 
