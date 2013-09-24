@@ -1,8 +1,6 @@
-We have been using Docker in our staging environment for a month
-now and are planning to make it part of our production setup once the
-first stable version gets released. We'll be discussing the staging
-environment setup today with the promise of following up on the
-production environment at a later date.
+We have been using [Docker](http://www.docker.io/) in our staging
+environment for a month now and are planning to make it part of our
+production setup once the first stable version gets released.
 
 Docker is a utility for creating virtualized Linux containers for
 shipping self-contained applications. As oppossed to a traditional VM
@@ -33,11 +31,9 @@ services and cannot be isolated to a particular component. The extra
 confidence that we get from integrating features at a platform level
 means that we are more effective and don't need to wait on one another.
 
-We couldn't find any clear guide on integrating Docker with Jenkins so we've decided to contribute one. We have included a Vagrantfile which automates
-the entire setup except creating Jenkins jobs. [We provide an example
-Sinatra app](https://github.com/cambridge-healthcare/hi_sinatra-docker) which includes all the required configuration to get everything working
-end-to-end, feel free to use it as the starting point for your own
-setup.
+We couldn't find any clear guide on integrating Docker with Jenkins so
+we've decided to contribute one. We have included a Vagrantfile which
+automates the entire setup except creating Jenkins jobs.
 
 ### 1. Install VirtualBox, Vagrant & git
 
@@ -49,7 +45,7 @@ Either install using your package manager or use the official downloads:
 
 ### 2. Create Vagrant VM
 
-This
+The
 [Vagrantfile](https://github.com/cambridge-healthcare/hi_sinatra-/blob/master/Vagrantfile)
 will get everything setup for you. Cloning the repository and running
 **vagrant up** inside it will create a VM with the latest stable Docker and
@@ -93,7 +89,7 @@ container_port=$(docker inspect $container_id | awk 'BEGIN { FS = "\"" } ; /"'$s
 echo "App running on http://localhost:$container_port"
 </pre>
 
-The above app includes a Dockerfile which builds the first Docker image.
+The app includes a Dockerfile which builds a Docker image.
 The first Docker build will take longer (depending on your internet
 connection), but as Docker caches build steps (pro tip: apart from
 **ADD**), subsequent builds will be significantly quicker.
@@ -132,18 +128,18 @@ Finished: SUCCESS
 
 While the first build takes 2 mins and 26 secs, the second one takes a
 mere 5 secs. That is **5 seconds** to install all the ruby gems, run all
-the tests, build a Docker image and start a new Docker container which
+the tests, build a Docker image and start a new Docker container that
 makes that app version available for further testing (eg. integration
-tests, stress tests), or simply ready for production. The resulting app
-image is a mere **12.29kB**. That's the only new content which needs
-deploying into production.
+tests, stress tests). The resulting app image is a mere **12.29kB**.
+That's the only new content which needs deploying into production.
 
 ### github service hooks
 
 For integrating github with a Jenkins server not accessible from the
 outside world, we have found Amazon SQS to be an elegant solution.
-There is a [Github SQS plugin](https://wiki.jenkins-ci.org/display/JENKINS/GitHub+SQS+Plugin) that is installable from within Jenkins, setup is
-straightforward.
+There is a [Github SQS
+plugin](https://wiki.jenkins-ci.org/display/JENKINS/GitHub+SQS+Plugin)
+that is installable from within Jenkins, setup is straightforward.
 
 The only gotcha is that the SQS must be setup in the **us-east-1**
 region. We had set it up initially in eu-west-1 and were puzzled as to
@@ -151,12 +147,11 @@ why it wasn't working.
 
 ### "How are you?" base Docker images
 
-During our use of Docker, we have made a few [howareyou base Docker
-images](https://index.docker.io/u/howareyou/) available on the public
-Docker index. The app which we have given as an example makes use
-of
+During our use of Docker, we have made public a few [Docker
+images](https://index.docker.io/u/howareyou/) on the public Docker
+index. The app which we have given as an example makes use of
 [howareyou/ruby_2.0.0-p247](https://index.docker.io/u/howareyou/ruby_2.0.0-p247/)
 and all its dependencies.
 
 If you have found this tutorial useful, please help us to improve it by adding
-your contributions to [hi_sinatra-docker](https://github.com/cambridge-healthcare/hi_sinatra-docker).
+your contributions via pull requests.
