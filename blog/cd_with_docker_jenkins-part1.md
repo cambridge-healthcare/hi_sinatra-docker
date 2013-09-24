@@ -52,7 +52,7 @@ Either install using your package manager or use the official downloads:
 ### 2. Create Vagrant VM
 
 This
-[Vagrantfile](https://github.com/cambridge-healthcare/hi_sinatra-/blob/master/Vagrantfile)
+[Vagrantfile](https://github.com/cambridge-healthcare/hi_sinatra-docker/blob/master/Vagrantfile)
 will get everything setup for you. Cloning the repository and running
 **vagrant up** inside it will create a VM with the latest stable Docker and
 Jenkins services running side-by-side. Jenkins belongs to the docker group and
@@ -82,7 +82,6 @@ Once this is successfully installed and Jenkins is restarted, add the following 
 This is the shell command which will run the build:
 
 <pre>
-set -e
 service=$JOB_NAME
 service_port=8000
 branch=$(echo $GIT_BRANCH | cut -d/ -f 2)
