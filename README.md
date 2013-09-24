@@ -73,7 +73,7 @@ Once this is successfully installed and Jenkins is restarted, add the following 
 | Build                  | Execute shell                                                 |
 </pre>
 
-This is the shell command which will run the build:
+This is the shell command which you will need to use for the build execution:
 
 <pre>
 service=$JOB_NAME
