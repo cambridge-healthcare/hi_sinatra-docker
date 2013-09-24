@@ -1,9 +1,9 @@
 ### Continuous Delivery with Docker and Jenkins - part I 
 
-This is our story of making docker an essential component of our
+This is our story of making Docker an essential component of our
 continuous delivery environment and the lessons that we've learned along
-the way. We have been using it in our staging environment for a month
-now and are planning of making it part of our production setup once the
+the way. We have been using dockor in our staging environment for a month
+now and are planning to make it part of our production setup once the
 first stable version gets released. We'll be discussing the staging
 environment setup today with the promise of following up on the
 production environment at a later date.
@@ -17,29 +17,29 @@ some of the isolation specific to hypervisors. What makes Docker
 appealing is that applications can be packaged as self-contained
 containers, shipped around as small data blobs and brought up as fully
 independent hosts in a matter of seconds. If an Amazon Machine Image
-(AMI) takes a few minutes to boot, the equivalent docker images take a
+(AMI) takes a few minutes to boot, the equivalent Docker images take a
 few seconds at most (normally ~1s). To find out more about Docker
 internals, see [Docker, The Whole Story](http://www.docker.io/the_whole_story/).
 
 We have converted our entire staging environment from a handful of AMIs
 to a single bare metal host running Docker. We have made it more
-efficient and quicker to bring up versions of services which undergo
+efficient and faster to bring up versions of services which undergo
 rigorous testing before they get shipped into production. Whenever a new
 github branch gets started, Jenkins, our Continuous Integration server,
-automatically attempts to build a new docker container from it. If all
-tests pass, this becomes available on our office network and we get a
-Campfire notification. If tests fail, we leave a docker image for our
+automatically attempts to build a new Docker container from it. If all
+tests pass, this container becomes available on our office network and we receive a
+Campfire notification. If tests fail, we leave a Docker image for our
 engineers to examine. For Service Oriented Architectures (SOA), this
 approach saves a lot of time when working on features that span multiple
 services and cannot be isolated to a particular component. The extra
-confidence that we get for integrating features at a platform level
+confidence that we get from integrating features at a platform level
 means that we are more effective and don't need to wait on one another.
 
-We couldn't find any clear guide on integrating docker with Jenkins,
+We couldn't find any clear guide on integrating Docker with Jenkins,
 this is our take on it. We have included a Vagrantfile which automates
 the entire setup except creating Jenkins jobs. We provide an example
 Sinatra app with the required configuration to get everything working
-end-to-end, feel free to use that as the starting for your own
+end-to-end, feel free to use that as the starting point for your own
 applications.
 
 #### 1. Install VirtualBox, Vagrant & git
@@ -53,11 +53,11 @@ Either install using your package manager or use the official downloads:
 #### 2. Create Vagrant VM
 
 This
-[Vagrantfile](https://github.com/cambridge-healthcare/hi-sinatra-docker/blob/master/Vagrantfile)
-will get everything set up for you. Cloning the repository and running
-`vagrant up` inside it will create a VM with the latest stable docker and
-Jenkins running side by side. Jenkins belongs to the docker group and
-can run docker commands directly.
+[Vagrantfile](https://github.com/cambridge-healthcare/hi-sinatra-/blob/master/Vagrantfile)
+will get everything setup for you. Cloning the repository and running
+`vagrant up` inside it will create a VM with the latest stable Docker and
+Jenkins running side-by-side. Jenkins belongs to the Docker group and
+can run Docker commands directly.
 
 <code>
 git clone https://github.com/cambridge-healthcare/hi-sinatra-docker.git
@@ -70,7 +70,7 @@ vagrant up
 Find the Jenkins Server running at http://localhost:8080/, **install the Git
 plugin**.
 
-Once this is successfully installed and Jenkins restarted, add the following job:
+Once this is successfully installed and Jenkins is restarted, add the following job:
 
 <pre>
 | Job name               | hi_sinatra                                                    |
@@ -96,12 +96,12 @@ container_port=$(docker inspect $container_id | awk 'BEGIN { FS = "\"" } ; /"'$s
 echo "App running on http://localhost:$container_port"
 </pre>
 
-The above app includes a Dockerfile which builds the first docker image.
-First docker build will take longer (depending on your internet
-connection), but as docker caches build steps (pro tip: apart from
+The above app includes a Dockerfile which builds the first Docker image.
+The first Docker build will take longer (depending on your internet
+connection), but as Docker caches build steps (pro tip: apart from
 **ADD**), subsequent builds will be significantly quicker.
 
-#### 4. Successful build results in a running docker container
+#### 4. Successful build results in a running Docker container
 
 Building the project for the first time (truncated output):
 
@@ -135,7 +135,7 @@ Finished: SUCCESS
 
 While the first build takes 2 mins and 26 secs, the second one takes a
 mere 5 secs. That is **5 seconds** to install all the ruby gems, run all
-the tests, build a docker image and start a new docker container which
+the tests, build a Docker image and start a new Docker container which
 makes that app version available for further testing (think integration
 tests, stress tests) or simply ready for production. Worth mentioning is
 that the resulting app image is a mere **12.29kB**. That's the only new
@@ -152,14 +152,14 @@ The only gotcha worth mentioning is that the SQS must be setup in the
 **us-east-1** region. We have initially set it up in eu-west-1 and were
 puzzled as to why it wasn't working.
 
-#### "How are you?" base docker images
+#### "How are you?" base Docker images
 
-During our use of docker, we have made a few [howareyou base docker
+During our use of Docker, we have made a few [howareyou base Docker
 images](https://index.docker.io/u/howareyou/) available on the public
-docker index. The app which we have given as an example here makes use
+Docker index. The app which we have given as an example makes use
 of
 [howareyou/ruby_2.0.0-p247](https://index.docker.io/u/howareyou/ruby_2.0.0-p247/)
 and all its dependencies.
 
-If you have found this tutorial useful, help us to improve it by adding
+If you have found this tutorial useful, please help us to improve it by adding
 your contributions to [hi_sinatra-docker](https://github.com/cambridge-healthcare/hi_sinatra-docker).
