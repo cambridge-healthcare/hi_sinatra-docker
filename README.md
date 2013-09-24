@@ -76,7 +76,6 @@ Once this is successfully installed and Jenkins is restarted, add the following 
 This is the shell command which will run the build:
 
 <pre>
-set -e
 service=$JOB_NAME
 service_port=8000
 branch=$(echo $GIT_BRANCH | cut -d/ -f 2)
