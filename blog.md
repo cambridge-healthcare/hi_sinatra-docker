@@ -149,7 +149,7 @@ There is an SQS plugin that is installable from within Jenkins, setup is
 straightforward.
 
 The only gotcha worth mentioning is that the SQS must be setup in the
-**us-east-1** region. We have initially set it up in eu-west-1 and were
+**us-east-1** region. We had initially set it up in eu-west-1 and were
 puzzled as to why it wasn't working.
 
 #### "How are you?" base Docker images
