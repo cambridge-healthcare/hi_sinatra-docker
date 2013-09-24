@@ -59,11 +59,11 @@ will get everything setup for you. Cloning the repository and running
 Jenkins running side-by-side. Jenkins belongs to the Docker group and
 can run Docker commands directly.
 
-<code>
+```sh
 git clone https://github.com/cambridge-healthcare/hi-sinatra-docker.git
 cd hi-sinatra-docker
 vagrant up
-</code>
+```
 
 #### 3. Setup Jenkins job
 
@@ -82,7 +82,7 @@ Once this is successfully installed and Jenkins is restarted, add the following 
 
 This is the shell command which will run the build:
 
-<pre>
+```sh
 set -e
 service=$JOB_NAME
 service_port=8000
@@ -94,7 +94,7 @@ container_id=$(docker run -d -p $service_port $service:$branch)
 container_port=$(docker inspect $container_id | awk 'BEGIN { FS = "\"" } ; /"'$service_port'":/ { print $4 }')
 
 echo "App running on http://localhost:$container_port"
-</pre>
+```
 
 The above app includes a Dockerfile which builds the first Docker image.
 The first Docker build will take longer (depending on your internet
