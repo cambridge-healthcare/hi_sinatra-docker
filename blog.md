@@ -60,8 +60,8 @@ Jenkins running side-by-side. Jenkins belongs to the Docker group and
 can run Docker commands directly.
 
 ```sh
-git clone https://github.com/cambridge-healthcare/hi-sinatra-docker.git
-cd hi-sinatra-docker
+git clone https://github.com/cambridge-healthcare/hi_sinatra-docker.git
+cd hi_sinatra-docker
 vagrant up
 ```
 
