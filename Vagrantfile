@@ -1,12 +1,28 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-BOX_NAME = ENV['BOX_NAME'] || "ubuntu"
-BOX_URI = ENV['BOX_URI'] || "http://files.vagrantup.com/precise64.box"
-VF_BOX_URI = ENV['BOX_URI'] || "http://files.vagrantup.com/precise64_vmware_fusion.box"
+BOX_NAME = ENV.fetch("BOX_NAME", "ubuntu")
+BOX_URI = ENV.fetch("BOX_URI", "http://files.vagrantup.com/precise64.box")
+BOX_IP = ENV.fetch("BOX_IP", "11.11.11.2")
+BOX_MEM = ENV.fetch("BOX_MEM", "1024")
+BOX_CPUS = ENV.fetch("BOX_CPUS", "2")
+VF_BOX_URI = ENV.fetch("BOX_URI", "http://files.vagrantup.com/precise64_vmware_fusion.box")
+SHARED_DIRS = ENV.fetch("BOX_SHARED_DIRS", "").strip.split(" ")
 
-DOCKER_PORTS = (49_153..50_000)
-JENKINS_PORT = 8080
+def share_dirs
+  lambda { |config|
+    if SHARED_DIRS.any?
+      # Sharing dirs over NFS requires a private network
+      SHARED_DIRS.each do |shared_dir|
+        config.vm.synced_folder(
+          File.expand_path(shared_dir),
+          "/mnt/#{File.basename(shared_dir)}",
+          :nfs => true
+        )
+      end
+    end
+  }
+end
 
 Vagrant::Config.run do |config|
   # Setup virtual machine box. This VM configuration code is always executed.
@@ -65,7 +81,7 @@ stop on runlevel [!2345]
 respawn limit 10 5
 
 script
-  sudo -Hu jenkins java -jar ~jenkins/jenkins.war -Djava.awt.headless=true --httpPort=#{JENKINS_PORT}
+  sudo -Hu jenkins java -jar ~jenkins/jenkins.war -Djava.awt.headless=true --httpPort=8080
 end script
 EOF},
     ]
@@ -81,27 +97,18 @@ Vagrant::VERSION >= "1.1.0" and Vagrant.configure("2") do |config|
   config.vm.provider :vmware_fusion do |f, override|
     override.vm.box = BOX_NAME
     override.vm.box_url = VF_BOX_URI
-    override.vm.synced_folder ".", "/vagrant", :disabled => true
+    config.vm.network(:private_network, :ip => BOX_IP)
+    override.vm.synced_folder(".", "/vagrant", :disabled => true)
     f.vmx["displayName"] = "hi_sinatra"
   end
 
   config.vm.provider :virtualbox do |vb|
     config.vm.box = BOX_NAME
     config.vm.box_url = BOX_URI
+    config.vm.network(:private_network, :ip => BOX_IP)
+    share_dirs.call(config)
     vb.customize ["modifyvm", :id, "--ioapic", "on"]
-    vb.customize ["modifyvm", :id, "--memory", "1024"]
-    vb.customize ["modifyvm", :id, "--cpus", "2"]
-  end
-end
-
-Vagrant::VERSION < "1.1.0" and Vagrant::Config.run do |config|
-  (DOCKER_PORTS.to_a << JENKINS_PORT).each do |port|
-    config.vm.forward_port port, port
-  end
-end
-
-Vagrant::VERSION >= "1.1.0" and Vagrant.configure("2") do |config|
-  (DOCKER_PORTS.to_a << JENKINS_PORT).each do |port|
-    config.vm.network :forwarded_port, :host => port, :guest => port
+    vb.customize ["modifyvm", :id, "--memory", BOX_MEM]
+    vb.customize ["modifyvm", :id, "--cpus", BOX_CPUS]
   end
 end
