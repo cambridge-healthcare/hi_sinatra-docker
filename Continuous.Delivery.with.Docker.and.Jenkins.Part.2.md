@@ -1,10 +1,14 @@
 Last week we started talking about how we use [Docker and Jenkins for
 Continuous
 Delivery](http://blog.howareyou.com/post/62157486858/continuous-delivery-with-docker-and-jenkins-part-i)
-of our service oriented architecture in staging. We will end the
-two-part series by talking about setting up Docker containers with
-dependencies on other containers, cross-container discovery and best
-practices for keeping your fleet of Docker containers efficient.
+of our service oriented architecture. We will end the two-part series by
+talking about setting up Docker containers with dependencies on other
+containers, cross-container discovery and best practices for keeping
+Docker containers efficient.
+
+### Docker containers with dependencies on other containers
+
+TODO
 
 ### Docker and AUFS layers limitation
 
@@ -12,24 +16,18 @@ Docker has a hard limit of 42 AUFS layers. Every time a command in your
 Dockerfile gets executed (except the `FROM` command), the result is a
 Docker image which is the equivalent to 1 AUFS layer. This sounds great
 in practice as one can stack all those images to build complex
-containers similar to how we stack git trees when creating git commits.
-Besides the speed boost that one gets from using images vs executing the
-same system commands over and over again, this approach results in a
-nice logical model and is easier to understand when reading a
-Dockerfile. The only exception to the rule is the `ADD` command which is
-not cached. Furthermore, all commands that follow the `ADD` command
-won't be cached either, just as all commands in other Dockerfiles that
-inherit `FROM` a Dockerfile won't be cached either.
+containers similar to how git trees get stacked in git commits. Besides
+the speed boost that one gets from using images vs executing the same
+system commands over and over again, this approach results in a nice
+logical model and is easier to understand when reading a Dockerfile. The
+only exception to the rule is the `ADD` command which is not cached.
+Furthermore, all commands that follow the `ADD` command won't be cached
+either.
 
 The flip-side of using many atomic commands (and thus images) is the 42
 AUFS layers limit that I've mentioned. It might sound like a lot, but
-I've hit it in this fairly simple [dockerized Sinatra
-app](https://github.com/cambridge-healthcare/hi_sinatra-docker) that is
-based on the following 3 Docker images:
-
-* [ruby:2.0.0-p247](https://index.docker.io/u/howareyou/ruby/)
-* [ruby-build:20130806](https://index.docker.io/u/howareyou/ruby-build/)
-* [ubuntu:12.04](https://index.docker.io/u/howareyou/precise/)
+I've hit it in the first implementation of this fairly simple
+[dockerized Sinatra app](https://github.com/cambridge-healthcare/hi_sinatra-docker/tree/v0.1.0).
 
 The error manifests itself through a rather vague error message:
 
@@ -44,7 +42,7 @@ detail about it.
 
 [Merging all
 commands](https://github.com/cambridge-healthcare/dockerfiles/pull/1)
-results in a single Docker image per Dockerfile.  One clear advantage is
+results in a single Docker image per Dockerfile. One clear advantage is
 that now we can see exactly how much disk space each layer uses:
 
 <pre>
