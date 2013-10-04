@@ -30,12 +30,17 @@ Vagrant::Config.run do |config|
   provisioning_script = []
 
   provision_dockerize = [
-    %{dockerize_version="0.1.0.rc1"},
+    %{dockerize_version="0.1.0"},
     %{dockerize_source="https://github.com/cambridge-healthcare/dockerize/archive/v${dockerize_version}"},
     %{dockerize_dir="/usr/local/src/dockerize-${dockerize_version}"},
     %{dockerize_bin="${dockerize_dir}/bin/dockerize"},
     %{if [[ ! -e $dockerize_bin ]]; then wget -q -O - "${dockerize_source}.tar.gz" | tar -C /usr/local/src -zxv; fi},
-    %{if [[ $(sudo grep -c "$dockerize_bin init" /root/.profile) == 0 ]]; then sudo echo 'eval \"$(/usr/local/src/dockerize-0.1.0.rc1/bin/dockerize init -)\"' >> /root/.profile; fi},
+    %{if [[ $(sudo grep -c "$dockerize_bin init" /root/.profile) == 0 ]]; then sudo echo 'eval \"$(/usr/local/src/dockerize-0.1.0/bin/dockerize init -)\"' >> /root/.profile; fi},
+  ]
+
+  provision_hi_sinatra = [
+    "sudo touch /root/.no_prompting_for_git_credentials",
+    "sudo -i dockerize boot cambridge-healthcare/hi_sinatra-docker:continuos-delivery-2 hi_sinatra",
   ]
 
   # Provision docker and new kernel if deployment was not done.
@@ -72,36 +77,16 @@ EOF},
         "echo '\"vagrant reload\" can be used in about 2 minutes to activate the new guest additions.'",
       ]
     end
-    provisioning_script += [
-      "groupadd docker",
-      "useradd jenkins -m -G docker",
-      "passwd -l jenkins",
-      "apt-get install -y openjdk-7-jre-headless git-core",
-      "cd ~jenkins",
-      "sudo -Hu jenkins git config --global user.name Jenkins",
-      "sudo -Hu jenkins git config --global user.email jenkins@$(hostname)",
-      "wget -q -O - http://mirrors.jenkins-ci.org/war-stable/latest/jenkins.war > ~jenkins/jenkins.war",
-      %{cat << EOF > /etc/init/jenkins.conf
-description "Jenkins Server"
-
-start on filesystem
-stop on runlevel [!2345]
-
-respawn limit 10 5
-
-script
-  sudo -Hu jenkins java -jar ~jenkins/jenkins.war -Djava.awt.headless=true --httpPort=8080
-end script
-EOF},
-    ]
+    provisioning_script << "apt-get install -q -y git-core"
+    provisioning_scrip += provision_dockerize
     # Activate kernel & ensure everything starts correctly by rebooting
-    provisioning_script += provision_dockerize
     provisioning_script << %{echo -e "\nVM needs to reboot...\n"}
     provisioning_script << "shutdown -r now"
   else
   # Already provisioned, just need to add a few other dependencies
     # Ensure dockerize is provisioned
     provisioning_script += provision_dockerize
+    provisioning_script += provision_hi_sinatra
     provisioning_script << %{echo "\nVM ready!\n"}
   end
 
