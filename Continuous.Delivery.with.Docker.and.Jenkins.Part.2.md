@@ -8,7 +8,11 @@ Docker containers efficient.
 
 ### Docker containers with dependencies on other containers
 
-TODO
+There are a few utilities which already integrate with Docker and are
+capable of orchestrating multi-container deploys such as
+[Dokku](https://github.com/progrium/dokku),
+[Deis](https://github.com/opdemand/deis) and
+[Maestro](https://github.com/toscanini/maestro).
 
 ### Docker and AUFS layers limitation
 
