@@ -33,9 +33,9 @@ Vagrant::Config.run do |config|
     %{dockerize_version="0.1.0.rc1"},
     %{dockerize_source="https://github.com/cambridge-healthcare/dockerize/archive/v${dockerize_version}"},
     %{dockerize_dir="/usr/local/src/dockerize-${dockerize_version}"},
-    %{dockerize_bin="${dockerize_dir}/bin"},
+    %{dockerize_bin="${dockerize_dir}/bin/dockerize"},
     %{if [[ ! -e $dockerize_bin ]]; then wget -q -O - "${dockerize_source}.tar.gz" | tar -C /usr/local/src -zxv; fi},
-    %{if [[ $(sudo grep -c "$dockerize_bin init" /root/.profile) == 0 ]]; then sudo echo "eval \"$($dockerize_bin init -)\" >> /root/.profile; fi},
+    %{if [[ $(sudo grep -c "$dockerize_bin init" /root/.profile) == 0 ]]; then sudo echo "eval \"$($dockerize_bin init -)\"" >> /root/.profile; fi},
   ]
 
   # Provision docker and new kernel if deployment was not done.
