@@ -1,1 +1,1 @@
-redis:2.6.16:6379
+howareyou/redis:2.6.16:6379
