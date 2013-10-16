@@ -68,6 +68,7 @@ EOF},
   provision_hi_sinatra = [
     "sudo touch /root/.no_prompting_for_git_credentials",
     "sudo -i dockerize boot cambridge-healthcare/hi_sinatra-docker:continuos-delivery-2 hi_sinatra",
+    "sudo -i echo \"hi_sinatra running on http://#{BOX_IP}:$(dockerize show hi_sinatra Tcp | awk '{ print $2 }')\"",
   ]
 
   provision_jenkins = [
