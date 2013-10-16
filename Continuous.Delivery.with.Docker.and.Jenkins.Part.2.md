@@ -83,12 +83,9 @@ vagrant up
 vagrant reload
 </pre>
 
-As dockerize recognises **cambridge-healthcare/hi_sinatra-docker** as a
-Github repository, it will ask you about your Github credentials. Since
-this repository is a public one, it's safe to go with the third
-option, **don't manage my credentials**.
-
-If you find dockerize useful, please show your appreciation by contributing back.
+By the time the VM finishes reloading, there will be a running version of the
+**hi_sinatra** app inside a Docker container using a redis server running
+in a separate container to track requests.
 
 [part1]: http://blog.howareyou.com/post/62157486858/continuous-delivery-with-docker-and-jenkins-part-i
 [hi_sinatra-docker]: https://github.com/cambridge-healthcare/hi_sinatra-docker/tree/v0.2.0
