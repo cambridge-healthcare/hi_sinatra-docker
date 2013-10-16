@@ -1,10 +1,10 @@
 A few weeks ago I started talking about how we use [Docker and Jenkins
 for Continuous Delivery][part1] in our staging environment. I will end
-the two-part series by talking about how we handle Docker containers
+the two-part series by explaining how we handle Docker containers
 with dependencies on other containers and the shell utility that we have
 built to automate the process.
 
-Before I go into any specifics, I want to describe our workflow with
+Before I go into specifics, I want to describe our workflow with
 Jenkins and Docker from a high-level perspective:
 
 * let's take the [hi_sinatra][hi_sinatra-docker] Ruby example app. It
@@ -39,7 +39,7 @@ a Redis server. If there are 5 branches, there will be 5 **hi_sinatra** app
 instances using independent Redis server instances for a total of 10 Docker
 containers.
 
-* since all dependent services are running in their own containers, start
+* since all dependent services are running in their own containers, we start
   a new container from the app image that we've just built and expose
 IPs for those containers as envs, eg `-e REDIS_HOST=172.17.0.8`.
 
@@ -54,7 +54,7 @@ are time-consuming to run in development.
 ### Dockerize
 
 [Dockerize][dockerize] is a language-agnostic, Docker proxy utility,
-meaning that all commands which it does not recognize will be passed
+meaning that all commands which it does not recognise will be passed
 through to Docker.
 
 The previously described workflow, as a single shell command:
@@ -83,7 +83,7 @@ vagrant up
 vagrant reload
 </pre>
 
-As dockerize recognizes **cambridge-healthcare/hi_sinatra-docker** as a
+As dockerize recognises **cambridge-healthcare/hi_sinatra-docker** as a
 Github repository, it will ask you about your Github credentials. Since
 this repository is a public one, it's safe to go with the third
 option, **don't manage my credentials**.
