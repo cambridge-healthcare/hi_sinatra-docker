@@ -27,15 +27,42 @@ Vagrant::Config.run do |config|
   # Setup virtual machine box. This VM configuration code is always executed.
   config.vm.box = BOX_NAME
   config.vm.box_url = BOX_URI
-  provisioning_script = []
+  provisioning_script = ["export DEBIAN_FRONTEND=noninteractive"]
+
+  provision_docker = [
+    "apt-get update -qq",
+    "apt-get install -qq -y linux-image-generic-lts-raring",
+    "wget -q -O - https://get.docker.io/gpg | apt-key add -",
+    "echo deb http://get.docker.io/ubuntu docker main > /etc/apt/sources.list.d/docker.list",
+    "apt-get update -qq; apt-get install -qq -y --force-yes lxc-docker",
+  ]
+
+  provision_guest_additions = [
+    "apt-get install -qq -y linux-headers-generic-lts-raring dkms",
+    "echo 'Downloading VBox Guest Additions...'",
+    "wget -q http://dlc.sun.com.edgesuite.net/virtualbox/4.2.12/VBoxGuestAdditions_4.2.12.iso",
+    # Prepare the VM to add guest additions after reboot
+    %{cat << EOF > /root/guest_additions.sh
+mount -o loop,ro /home/vagrant/VBoxGuestAdditions_4.2.12.iso /mnt
+echo yes | /mnt/VBoxLinuxAdditions.run
+umount /mnt
+rm /root/guest_additions.sh
+EOF},
+    "chmod 700 /root/guest_additions.sh",
+    "sed -i -E 's#^exit 0#[ -x /root/guest_additions.sh ] \\&\\& /root/guest_additions.sh#' /etc/rc.local",
+    "echo 'Installation of VBox Guest Additions is proceeding in the background.'",
+    "echo '\"vagrant reload\" can be used in about 2 minutes to activate the new guest additions.'",
+  ]
 
   provision_dockerize = [
-    %{dockerize_version="0.1.0"},
+    %{apt-get install -qq -y git-core},
+    %{export dockerize_version="0.1.0"},
     %{dockerize_source="https://github.com/cambridge-healthcare/dockerize/archive/v${dockerize_version}"},
     %{dockerize_dir="/usr/local/src/dockerize-${dockerize_version}"},
     %{dockerize_bin="${dockerize_dir}/bin/dockerize"},
     %{if [[ ! -e $dockerize_bin ]]; then wget -q -O - "${dockerize_source}.tar.gz" | tar -C /usr/local/src -zxv; fi},
     %{if [[ $(sudo grep -c "$dockerize_bin init" /root/.profile) == 0 ]]; then sudo echo 'eval \"$(/usr/local/src/dockerize-0.1.0/bin/dockerize init -)\"' >> /root/.profile; fi},
+    %{if [[ $(sudo grep -c "$dockerize_bin init" /home/jenkins/.profile) == 0 ]]; then sudo echo 'eval \"$(/usr/local/src/dockerize-0.1.0/bin/dockerize init -)\"' >> /home/jenkins/.profile; fi},
   ]
 
   provision_hi_sinatra = [
@@ -43,48 +70,40 @@ Vagrant::Config.run do |config|
     "sudo -i dockerize boot cambridge-healthcare/hi_sinatra-docker:continuos-delivery-2 hi_sinatra",
   ]
 
+  provision_jenkins = [
+    "useradd jenkins -s /bin/bash -m -G docker",
+    "passwd -l jenkins",
+    "apt-get install -qq -y openjdk-7-jre-headless git-core",
+    "cd ~jenkins",
+    "sudo -Hu jenkins git config --global user.name Jenkins",
+    "sudo -Hu jenkins git config --global user.email jenkins@$(hostname)",
+    "wget -q -O - http://mirrors.jenkins-ci.org/war-stable/latest/jenkins.war > ~jenkins/jenkins.war",
+    %{cat << EOF > /etc/init/jenkins.conf
+description "Jenkins Server"
+
+start on filesystem
+stop on runlevel [!2345]
+
+respawn limit 10 5
+
+script
+  sudo -Hu jenkins java -jar ~jenkins/jenkins.war -Djava.awt.headless=true --httpPort=8080
+end script
+EOF},
+  ]
+
   # Provision docker and new kernel if deployment was not done.
   # It is assumed Vagrant can successfully launch the provider instance.
   if Dir.glob("#{File.dirname(__FILE__)}/.vagrant/machines/default/*/id").empty?
-    # Add lxc-docker package
-    provisioning_script += [
-      "wget -q -O - https://get.docker.io/gpg | apt-key add -",
-      "echo deb http://get.docker.io/ubuntu docker main > /etc/apt/sources.list.d/docker.list",
-      "apt-get update -qq; apt-get install -q -y --force-yes lxc-docker",
-    ]
-    # Add Ubuntu raring backported kernel
-    provisioning_script += [
-      "apt-get update -qq",
-      "apt-get install -q -y linux-image-generic-lts-raring",
-    ]
+    provisioning_script += provision_docker
     # Add guest additions if local vbox VM. As virtualbox is the default provider,
     # it is assumed it won't be explicitly stated.
     if ENV["VAGRANT_DEFAULT_PROVIDER"].nil? && ARGV.none? { |arg| arg.downcase.start_with?("--provider") }
-      provisioning_script += [
-        "apt-get install -q -y linux-headers-generic-lts-raring dkms",
-        "echo 'Downloading VBox Guest Additions...'",
-        "wget -q http://dlc.sun.com.edgesuite.net/virtualbox/4.2.12/VBoxGuestAdditions_4.2.12.iso",
-        # Prepare the VM to add guest additions after reboot
-        %{cat << EOF > /root/guest_additions.sh
-mount -o loop,ro /home/vagrant/VBoxGuestAdditions_4.2.12.iso /mnt
-echo yes | /mnt/VBoxLinuxAdditions.run
-umount /mnt
-rm /root/guest_additions.sh
-EOF},
-        "chmod 700 /root/guest_additions.sh",
-        "sed -i -E 's#^exit 0#[ -x /root/guest_additions.sh ] \\&\\& /root/guest_additions.sh#' /etc/rc.local",
-        "echo 'Installation of VBox Guest Additions is proceeding in the background.'",
-        "echo '\"vagrant reload\" can be used in about 2 minutes to activate the new guest additions.'",
-      ]
+      provisioning_script += provision_guest_additions
     end
-    provisioning_script << "apt-get install -q -y git-core"
-    provisioning_scrip += provision_dockerize
-    # Activate kernel & ensure everything starts correctly by rebooting
-    provisioning_script << %{echo -e "\nVM needs to reboot...\n"}
-    provisioning_script << "shutdown -r now"
   else
-  # Already provisioned, just need to add a few other dependencies
-    # Ensure dockerize is provisioned
+    # Already provisioned, just need to add a few other dependencies
+    provisioning_script += provision_jenkins
     provisioning_script += provision_dockerize
     provisioning_script += provision_hi_sinatra
     provisioning_script << %{echo "\nVM ready!\n"}
