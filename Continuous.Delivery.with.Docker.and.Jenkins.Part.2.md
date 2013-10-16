@@ -88,7 +88,7 @@ Github repository, it will ask you about your Github credentials. Since
 this repository is a public one, it's safe to go with the third
 option, **don't manage my credentials**.
 
-If you find dockerize useful, show your appreciation by contributing back.
+If you find dockerize useful, please show your appreciation by contributing back.
 
 [part1]: http://blog.howareyou.com/post/62157486858/continuous-delivery-with-docker-and-jenkins-part-i
 [hi_sinatra-docker]: https://github.com/cambridge-healthcare/hi_sinatra-docker/tree/v0.2.0
