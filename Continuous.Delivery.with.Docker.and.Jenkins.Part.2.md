@@ -1,126 +1,95 @@
 A few weeks ago I started talking about how we use [Docker and Jenkins
-for Continuous
-Delivery](http://blog.howareyou.com/post/62157486858/continuous-delivery-with-docker-and-jenkins-part-i)
-in our staging environment. I will end the two-part series by talking
-about how we handle Docker containers with dependencies on other
-containers and the shell utility that we have built to automate the
-manual and time-consuming docker commands.
+for Continuous Delivery][part1] in our staging environment. I will end
+the two-part series by talking about how we handle Docker containers
+with dependencies on other containers and the shell utility that we have
+built to automate the process.
 
-Before I go into any specifics, I want to describe our Continuous
-Delivery workflow with Jenkins and Docker from a high-level perspective.
-Let's imagine that we have a Ruby app called **snomed** that we have
-setup a Github repository and Jenkins job for.
+Before I go into any specifics, I want to describe our workflow with
+Jenkins and Docker from a high-level perspective:
+
+* let's take the [hi_sinatra][hi_sinatra-docker] Ruby example app. It
+  has its own Github repository and we have a simple, non-git Jenkins
+job for it.
 
 * every commit pushed to Github, regardless of the branch, triggers a
   Jenkins build (via Amazon SQS). All Jenkins builds will result in a
 Docker image. A successful build will produce a running Docker
 container. A failed build will produce a stopped container which can be
 investigated by either looking at the logs or starting it with a
-terminal attached to it
+terminal attached to it.
 
-* if Docker doesn't have a **snomed/master** pre-built image, a new one
-  will be created from the master branch. This master image gets
-re-built every time there's a commit against the master branch. Having a
-master image speeds up all branch builds (think initial setup for gems,
-modules, C extensions etc.). The resulting image won't use any caching
-and all intermediary images will be removed.
+* if Docker doesn't have a **hi_sinatra/master** pre-built image,
+  a new one will be created from the master branch. This master image
+gets re-built every time there's a commit against the master branch.
+Having a master image speeds up image builds considerably (eg.
+installing Ruby gems, installing node modules, C extensions etc). The
+resulting image won't use any caching and all intermediary images will
+be removed. Just to clarify, this image will not be shipped into
+production.
 
-* only if a Docker image with that app's name, branch name and git sha
-  doesn't exist, go ahead and build one. The end result that we're
-interested in is to have the following Docker image available: eg
-**snomed/master:a8e8e83**
+* if a Docker image with that app's name, branch and tagged with the git
+  SHA doesn't exist, we want Docker to build it for us. At this point,
+we're interested to have the eg.
+**hi_sinatra/second-blog-post:a8e8e83** Docker image available.
 
 * before a new container can be started from the image that we've just
   built, all services that the app requires at that point in time must
-be running in their own independent containers. Our app might need a
-Redis server, a MySQL server, RabbitMQ broker etc. Every branch will
-have it's own set of service dependencies, so if there are 5 branches,
-there will be 5 sets of Redis servers, MySQL servers, RabbitMQ servers
-etc.
+be running in their own independent containers. Our **hi_sinatra** app needs
+a Redis server. If there are 5 branches, there will be 5 **hi_sinatra** app
+instances using independent Redis server instances for a total of 10 Docker
+containers.
 
-* when all dependent services are running in their own containers, start
+* since all dependent services are running in their own containers, start
   a new container from the app image that we've just built and expose
-IPs for all dependent containers as envs
+IPs for those containers as envs, eg `-e REDIS_HOST=172.17.0.8`.
 
-* before the app processes start in the new container, ensure all tests
-  pass - both unit, integration and acceptance. At this point, we want
-to catch any integration bugs. Our CI environment, with the help of
-Docker, is actually a sandbox, the last check before code gets shipped
-into production. Containers must be fully working, all tests must pass,
-even those that are interfacing with real services and are
-time-consuming to run in development.
+* before our **hi_sinatra** app starts in its new Docker container, all
+  tests must pass - both unit, integration and acceptance. At this
+point, we want to catch any integration bugs. Our CI environment, with
+the help of Docker, is actually a sandbox, the last check before code
+gets shipped into production. Containers must be fully working, all
+tests must pass, even those that are interfacing with real services and
+are time-consuming to run in development.
 
-### Docker containers with dependencies on other containers
+### Dockerize
 
-There are a few utilities which already integrate with Docker and are
-capable of orchestrating multi-container deploys such as
-[Dokku](https://github.com/progrium/dokku),
-[Deis](https://github.com/opdemand/deis) and
-[Maestro](https://github.com/toscanini/maestro). The reason why we
-chose to build our own utility was the 
+[Dockerize][dockerize] is a language-agnostic, Docker proxy utility,
+meaning that all commands which it does not recognize will be passed
+through to Docker.
 
-### Efficient Docker containers
-
-**Docker has a hard limit of 42 AUFS layers**. Every time a command in
-your Dockerfile gets executed (except the `FROM` command), the result is
-a Docker image which is the equivalent to 1 AUFS layer. This sounds
-great in theory as one can stack all those images to build complex
-containers similar to how git trees get stacked within git commits.  The
-speed boost from using images vs executing the same system commands over
-and over again is immense, but there is one caveat. The `ADD` command
-cannot be cached, so as soon as Docker comes across this command, it
-stops using the pre-built images and will start creating new ones. This
-is true for all commands that follow the `ADD` command. Furthermore,
-this also continues in all inheriting Dockerfiles. In our [Ruby 2.0
-Dockerfile](#xxx), where we were inheriting from [ruby-build](#xxx) ,
-Ruby compilation would not be cached because `ADD` was used in the
-ruby-build Dockerfile.
-
-
-Many atomic commands (and thus images) results in a nice logical model
-and is easier to understand when reading a Dockerfile. 
-
-The flip-side of using many atomic commands (and thus images) is the 42
-AUFS layers limit that I've mentioned. It might sound like a lot, but
-I've hit it in the first implementation of this fairly simple
-[dockerized Sinatra app](https://github.com/cambridge-healthcare/hi_sinatra-docker/tree/v0.1.0).
-
-The error manifests itself through a rather vague error message:
+The previously described workflow, as a single shell command:
 
 <pre>
-Error build: Unable to mount using aufs
-Unable to mount using aufs
+dockerize boot cambridge-healthcare/hi_sinatra-docker hi_sinatra
 </pre>
 
-This [docker github
-issue](https://github.com/dotcloud/docker/issues/2028) goes into more
-detail about it.
+The **hi_sinatra** app comes with 2 files that dockerize picks
+up on:
 
+* `.dockerize.containers` which defines service dependencies
 
-[Merging all
-commands](https://github.com/cambridge-healthcare/dockerfiles/pull/1)
-results in a single Docker image per Dockerfile. One clear advantage is
-that now we can see exactly how much disk space each layer uses:
+* `.dockerize.envs` which will forward all specified environment
+  variables on the Docker host into the container
+
+The Vagrantfile that comes with [hi_sinatra][hi_sinatra-docker] will
+get you up and running with Docker, Jenkins and now Dockerize. The
+quickest way to try the whole setup ([provided you have Vagrant
+installed][part1]):
 
 <pre>
-REPOSITORY             TAG                 ID                  CREATED             SIZE
-howareyou/ruby         2.0.0-p247          b712db79101d        3 hours ago         131.7 MB (virtual 613 MB)
-howareyou/ruby-build   20130806            fb9df8396ee4        4 hours ago         203.4 MB (virtual 481.3 MB)
-howareyou/ubuntu       12.04               a6bc0c7e68ea        4 hours ago         146.4 MB (virtual 277.9 MB)
-ubuntu                 12.04               8dbd9e392a96        5 months ago        131.5 MB (virtual 131.5 MB)
+git clone https://github.com/cambridge-healthcare/hi_sinatra-docker.git
+cd hi_sinatra-docker
+vagrant up
+vagrant reload
 </pre>
 
-Docker ubuntu:12.04 image uses 131.5 MB. Our customized ubuntu:12.04
-takes a further 146.4 MB and result in a combined total of 277.9 MB.  To
-run ruby 2.0.0-p247 we need a further 2 Docker images: ruby-build and
-the ruby image itself. A full ruby 2.0.0-p247 Docker image requires 4
-images in total using 613 MB. Before combining commands across various
-Dockerfiles, this same image used to be made of about 30+ Docker images,
-bringing us very close to the 42 AUFS layers limit.
+As dockerize recognizes **cambridge-healthcare/hi_sinatra-docker** as a
+Github repository, it will ask you about your Github credentials. Since
+this repository is a public one, it's safe to go with the third
+option, **don't manage my credentials**.
 
-[Flat Docker images](http://3ofcoins.net/2013/09/22/flat-docker-images/)
-by Maciej Pasternacki is a great post which talks about this same
-problem more and offers a Perl script as a solution to the above
-problem.
+If you find dockerize useful, show your appreciation by contributing back.
 
-785
+[part1]: http://blog.howareyou.com/post/62157486858/continuous-delivery-with-docker-and-jenkins-part-i
+[hi_sinatra-docker]: https://github.com/cambridge-healthcare/hi_sinatra-docker/tree/v0.2.0
+[dockerize]: https://github.com/cambridge-healthcare/dockerize
