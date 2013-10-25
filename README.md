@@ -2,34 +2,16 @@ We have been using [Docker](http://www.docker.io/) in our staging
 environment for a month now and are planning to make it part of our
 production setup once the first stable version gets released.
 
-Docker is a utility for creating virtualized Linux containers for
-shipping self-contained applications. As oppossed to a traditional VM
-which runs a full-blown operating system on top of the host, Docker
-leverages LinuX Containers (LXC) which run on the same operating system.
-This results in a more efficient usage of system resource by trading
-some of the isolation specific to hypervisors. What makes Docker
-appealing is that applications can be packaged as self-contained
-containers, shipped around as small data blobs and brought up as fully
-independent hosts in a matter of seconds. If an Amazon Machine Image
-(AMI) takes a few minutes to boot, the equivalent Docker images take a
-few seconds at most (normally ~1s). To find out more about Docker
-internals, see [Docker, The Whole Story](http://www.docker.io/the_whole_story/).
-
-We have converted our entire staging environment from a handful of AMIs
-to a single bare metal host running Docker. We have made it more
-efficient and faster to bring up versions of services which undergo
-rigorous testing before they get shipped into production.
-
-Whenever a new
-github branch gets started, Jenkins, our Continuous Integration server,
-automatically attempts to build a new Docker container from it. If all
-tests pass, this container becomes available on our office network and we receive a
-Campfire notification. If tests fail, we leave a Docker image for our
-engineers to examine. For Service Oriented Architectures (SOA), this
-approach saves a lot of time when working on features that span multiple
-services and cannot be isolated to a particular component. The extra
-confidence that we get from integrating features at a platform level
-means that we are more effective and don't need to wait on one another.
+Whenever a new github branch gets started, Jenkins, our Continuous
+Integration server, automatically attempts to build a new Docker
+container from it. If all tests pass, this container becomes available
+on our office network and we receive a Campfire notification. If tests
+fail, we leave a Docker image for our engineers to examine. For Service
+Oriented Architectures (SOA), this approach saves a lot of time when
+working on features that span multiple services and cannot be isolated
+to a particular component. The extra confidence that we get from
+integrating features at a platform level means that we are more
+effective and don't need to wait on one another.
 
 We couldn't find any clear guide on integrating Docker with Jenkins so
 we've decided to contribute one. We have included a Vagrantfile which
@@ -49,8 +31,12 @@ The
 [Vagrantfile](https://github.com/cambridge-healthcare/hi_sinatra-docker/blob/master/Vagrantfile)
 will get everything setup for you. Cloning the repository and running
 **vagrant up** inside it will create a VM with the latest stable Docker and
-Jenkins services running side-by-side. Jenkins belongs to the docker group and
-can run Docker commands directly.
+Jenkins services running side-by-side.
+
+There will also be a running version of **hi_sinatra** inside a Docker
+container using a Redis server running in a separate container for
+tracking requests. Use the IP address and port displayed at the end of
+the Vagrant run to access the **hi_sinatra** app in your browser.
 
 <pre>
 git clone https://github.com/cambridge-healthcare/hi_sinatra-docker.git
@@ -60,68 +46,114 @@ vagrant up
 
 ### 3. Setup Jenkins job
 
-Find the Jenkins Server running at http://localhost:8080/, install the [Git
-plugin](https://wiki.jenkins-ci.org/display/JENKINS/Git+Plugin).
-
-Once this is successfully installed and Jenkins is restarted, add the following job:
+As the jenkins user belongs to the docker group, it can run Docker
+commands directly. Combined with [Dockerize][dockerize], setting a job
+that integrates with Docker couldn't be easier:
 
 <pre>
-| Job name               | hi_sinatra                                                    |
-| Job type               | Build a free-style software project                           |
-| Source Code Management | Git                                                           |
-| Repository URL         | https://github.com/cambridge-healthcare/hi_sinatra-docker.git |
-| Build                  | Execute shell                                                 |
+| Job name | hi_sinatra                          |
+| Job type | Build a free-style software project |
+| Build    | Execute shell                       |
 </pre>
 
 This is the shell command which you will need to use for the build execution:
 
 <pre>
-service=$JOB_NAME
-service_port=8000
-branch=$(echo $GIT_BRANCH | cut -d/ -f 2)
-
-docker build -t $service:$branch $WORKSPACE
-
-container_id=$(docker run -d -p $service_port $service:$branch)
-container_port=$(docker inspect $container_id | awk 'BEGIN { FS = "\"" } ; /"'$service_port'":/ { print $4 }')
-
-echo "App running on http://localhost:$container_port"
+/bin/bash -c "source $HOME/.profile && dockerize boot cambridge-healthcare/hi_sinatra-docker hi_sinatra"
 </pre>
 
-The app includes a Dockerfile which builds a Docker image.
-The first Docker build will take longer (depending on your internet
-connection), but as Docker caches build steps (pro tip: apart from
-**ADD**), subsequent builds will be significantly quicker.
+Every successful Jenkins build will now result in a Docker container
+running **hi_sinatra** and a Redis server container for each git branch.
 
 ### 4. Successful build results in a running Docker container
 
 Building the project for the first time (truncated output):
 
 <pre>
-Building in workspace /home/jenkins/.jenkins/jobs/hi_sinatra/workspace
-Cloning repository https://github.com/cambridge-healthcare/hi_sinatra-docker.git
-Commencing build of Revision bbb5383939cf719745c232c67f0dffe99b639d91 (origin/master, origin/HEAD)
-.
-.
-.
-Step 1 : FROM howareyou/ruby_2.0.0-p247
-Pulling repository howareyou/ruby_2.0.0-p247
-.
-.
-.
-Step 9 : RUN cd /var/apps/$SERVICE && bin/test
- ---> Running in bbaaf476e848
-Run options: include {:focus=>true}
+Building in workspace /home/jenkins/.jenkins/workspace/hi_sinatra
+[hi_sinatra] $ /bin/sh -xe /tmp/hudson8824124682277145403.sh
++ /bin/bash -c source /home/jenkins/.profile && dockerize boot cambridge-healthcare/hi_sinatra-docker hi_sinatra
+HEAD is now at b054795... @dawson ready for review
+Uploading context 528384 bytes
+Uploading context 1085440 bytes
+Uploading context 1611776 bytes
+Uploading context 2162688 bytes
+Uploading context 2334720 bytes
 
-All examples were filtered out; ignoring {:focus=>true}
-.
+Step 1 : FROM howareyou/ruby:2.0.0-p247
+ ---> b712db79101d
+Step 2 : ADD ./ /var/apps/hi_sinatra
+ ---> 442707553694
+Step 3 : RUN . /.profile ;  rm -fr /var/apps/hi_sinatra/.git ;  cd /var/apps/hi_sinatra ;  bundle install --local ;# END RUN
+ ---> Running in 747a7653af9f
+Installing diff-lcs (1.2.4) 
+Installing rack (1.5.2) 
+Installing rack-protection (1.5.0) 
+Installing rack-test (0.6.2) 
+Installing redis (3.0.5) 
+Installing rspec-core (2.14.5) 
+Installing rspec-expectations (2.14.3) 
+Installing rspec-mocks (2.14.3) 
+Installing rspec (2.14.1) 
+Installing tilt (1.4.1) 
+Installing sinatra (1.4.3) 
+Using bundler (1.3.5) 
+Updating files in vendor/cache
+Your bundle is complete!
+Use `bundle show [gemname]` to see where a bundled gem is installed.
+ ---> 5439e797487a
+Step 4 : CMD . /.profile && cd /var/apps/hi_sinatra && bin/test && bin/boot
+ ---> Running in 8282ba047a40
+ ---> 1cf5ae0c0cbc
+Step 5 : EXPOSE 8000
+ ---> Running in 54b5a5d26b28
+ ---> 0d07513f4e63
+Successfully built 0d07513f4e63
+Removing intermediate container b4a2da6aa89a
+Removing intermediate container 747a7653af9f
+Removing intermediate container 8282ba047a40
+Removing intermediate container 54b5a5d26b28
+Uploading context 557056 bytes
+Uploading context 1114112 bytes
+Uploading context 1660928 bytes
+Uploading context 2217984 bytes
+Uploading context 2334720 bytes
 
-Finished in 0.02125 seconds
-1 example, 0 failures
-.
-.
-App running on http://localhost:49153
-
+Step 1 : FROM hi_sinatra:master
+ ---> 0d07513f4e63
+Step 2 : ADD ./ /var/apps/hi_sinatra
+ ---> 8fd588d1629b
+Step 3 : RUN . /.profile ;  rm -fr /var/apps/hi_sinatra/.git ;  cd /var/apps/hi_sinatra ;  bundle install --local ;# END RUN
+ ---> Running in bebf708f0c8a
+Using diff-lcs (1.2.4) 
+Using rack (1.5.2) 
+Using rack-protection (1.5.0) 
+Using rack-test (0.6.2) 
+Using redis (3.0.5) 
+Using rspec-core (2.14.5) 
+Using rspec-expectations (2.14.3) 
+Using rspec-mocks (2.14.3) 
+Using rspec (2.14.1) 
+Using tilt (1.4.1) 
+Using sinatra (1.4.3) 
+Using bundler (1.3.5) 
+Updating files in vendor/cache
+Your bundle is complete!
+Use `bundle show [gemname]` to see where a bundled gem is installed.
+ ---> 1b91e7998014
+Step 4 : CMD . /.profile && cd /var/apps/hi_sinatra && bin/test && bin/boot
+ ---> Running in 28987e90ee13
+ ---> f16d718c59d5
+Step 5 : EXPOSE 8000
+ ---> Running in b540dec6a80a
+ ---> f7980a764c57
+Successfully built f7980a764c57
+Removing intermediate container 2e8635a04a6e
+Removing intermediate container bebf708f0c8a
+Removing intermediate container 28987e90ee13
+Removing intermediate container b540dec6a80a
+c21ec0d7c419
+293ffdc2e66c
 Finished: SUCCESS
 </pre>
 
@@ -154,3 +186,5 @@ and all its dependencies.
 
 If you have found this tutorial useful, please help us to improve it by adding
 your contributions via pull requests.
+
+[dockerize]: https://github.com/cambridge-healthcare/dockerize
