@@ -75,6 +75,7 @@ script
   sudo -Hu jenkins java -jar /home/jenkins/jenkins.war -Djava.awt.headless=true --httpPort=8080
 end script
 EOF},
+    "start jenkins",
   ]
 
   if Dir.glob("#{File.dirname(__FILE__)}/.vagrant/machines/default/*/id").empty?
