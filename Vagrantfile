@@ -67,8 +67,9 @@ EOF},
 
   provision_hi_sinatra = [
     "sudo touch /root/.no_prompting_for_git_credentials",
+    "sudo touch /jenkins/.no_prompting_for_git_credentials",
     "sudo -i dockerize boot cambridge-healthcare/hi_sinatra-docker:continuos-delivery-2 hi_sinatra",
-    "sudo -i echo \"hi_sinatra running on http://#{BOX_IP}:$(dockerize show hi_sinatra Tcp | awk '{ print $2 }')\"",
+    "sudo -i echo \"hi_sinatra successfully started, available on http://#{BOX_IP}:$(dockerize show hi_sinatra Tcp | awk '{ print $2 }')\"",
   ]
 
   provision_jenkins = [
@@ -97,6 +98,7 @@ EOF},
   # It is assumed Vagrant can successfully launch the provider instance.
   if Dir.glob("#{File.dirname(__FILE__)}/.vagrant/machines/default/*/id").empty?
     provisioning_script += provision_docker
+    provisioning_script += provision_jenkins
     # Add guest additions if local vbox VM. As virtualbox is the default provider,
     # it is assumed it won't be explicitly stated.
     if ENV["VAGRANT_DEFAULT_PROVIDER"].nil? && ARGV.none? { |arg| arg.downcase.start_with?("--provider") }
@@ -104,7 +106,6 @@ EOF},
     end
   else
     # Already provisioned, just need to add a few other dependencies
-    provisioning_script += provision_jenkins
     provisioning_script += provision_dockerize
     provisioning_script += provision_hi_sinatra
     provisioning_script << %{echo "\nVM ready!\n"}
