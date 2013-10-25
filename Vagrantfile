@@ -37,23 +37,6 @@ Vagrant::Config.run do |config|
     "apt-get update -qq; apt-get install -qq -y --force-yes lxc-docker",
   ]
 
-  provision_guest_additions = [
-    "apt-get install -qq -y linux-headers-generic-lts-raring dkms",
-    "echo 'Downloading VBox Guest Additions...'",
-    "wget -q http://dlc.sun.com.edgesuite.net/virtualbox/4.2.12/VBoxGuestAdditions_4.2.12.iso",
-    # Prepare the VM to add guest additions after reboot
-    %{cat << EOF > /root/guest_additions.sh
-mount -o loop,ro /home/vagrant/VBoxGuestAdditions_4.2.12.iso /mnt
-echo yes | /mnt/VBoxLinuxAdditions.run
-umount /mnt
-rm /root/guest_additions.sh
-EOF},
-    "chmod 700 /root/guest_additions.sh",
-    "sed -i -E 's#^exit 0#[ -x /root/guest_additions.sh ] \\&\\& /root/guest_additions.sh#' /etc/rc.local",
-    "echo 'Installation of VBox Guest Additions is proceeding in the background.'",
-    "echo '\"vagrant reload\" can be used in about 2 minutes to activate the new guest additions.'",
-  ]
-
   provision_dockerize = [
     %{apt-get install -qq -y git-core},
     %{export dockerize_version="0.1.0"},
@@ -67,19 +50,19 @@ EOF},
 
   provision_hi_sinatra = [
     "sudo touch /root/.no_prompting_for_git_credentials",
-    "sudo touch /jenkins/.no_prompting_for_git_credentials",
+    "sudo touch /home/jenkins/.no_prompting_for_git_credentials",
     "sudo -i dockerize boot cambridge-healthcare/hi_sinatra-docker:continuos-delivery-2 hi_sinatra",
-    "sudo -i echo \"hi_sinatra successfully started, available on http://#{BOX_IP}:$(dockerize show hi_sinatra Tcp | awk '{ print $2 }')\"",
+    "if [[ $? = 0 ]]; then sudo -i echo \"hi_sinatra successfully started, available on http://#{BOX_IP}:$(sudo -i dockerize show hi_sinatra Tcp | awk '{ print $2 }')\"; fi",
   ]
 
   provision_jenkins = [
     "useradd jenkins -s /bin/bash -m -G docker",
     "passwd -l jenkins",
     "apt-get install -qq -y openjdk-7-jre-headless git-core",
-    "cd ~jenkins",
+    "cd /home/jenkins",
     "sudo -Hu jenkins git config --global user.name Jenkins",
     "sudo -Hu jenkins git config --global user.email jenkins@$(hostname)",
-    "wget -q -O - http://mirrors.jenkins-ci.org/war-stable/latest/jenkins.war > ~jenkins/jenkins.war",
+    "wget -q -O - http://mirrors.jenkins-ci.org/war-stable/latest/jenkins.war > /home/jenkins/jenkins.war",
     %{cat << EOF > /etc/init/jenkins.conf
 description "Jenkins Server"
 
@@ -89,23 +72,14 @@ stop on runlevel [!2345]
 respawn limit 10 5
 
 script
-  sudo -Hu jenkins java -jar ~jenkins/jenkins.war -Djava.awt.headless=true --httpPort=8080
+  sudo -Hu jenkins java -jar /home/jenkins/jenkins.war -Djava.awt.headless=true --httpPort=8080
 end script
 EOF},
   ]
 
-  # Provision docker and new kernel if deployment was not done.
-  # It is assumed Vagrant can successfully launch the provider instance.
   if Dir.glob("#{File.dirname(__FILE__)}/.vagrant/machines/default/*/id").empty?
     provisioning_script += provision_docker
     provisioning_script += provision_jenkins
-    # Add guest additions if local vbox VM. As virtualbox is the default provider,
-    # it is assumed it won't be explicitly stated.
-    if ENV["VAGRANT_DEFAULT_PROVIDER"].nil? && ARGV.none? { |arg| arg.downcase.start_with?("--provider") }
-      provisioning_script += provision_guest_additions
-    end
-  else
-    # Already provisioned, just need to add a few other dependencies
     provisioning_script += provision_dockerize
     provisioning_script += provision_hi_sinatra
     provisioning_script << %{echo "\nVM ready!\n"}
@@ -130,6 +104,7 @@ Vagrant::VERSION >= "1.1.0" and Vagrant.configure("2") do |config|
     config.vm.box_url = BOX_URI
     # Sharing dirs over NFS requires a private network
     config.vm.network(:private_network, :ip => BOX_IP)
+    config.vm.synced_folder(".", "/vagrant", :disabled => true)
     share_dirs.call(config)
     vb.customize ["modifyvm", :id, "--ioapic", "on"]
     vb.customize ["modifyvm", :id, "--memory", BOX_MEM]
