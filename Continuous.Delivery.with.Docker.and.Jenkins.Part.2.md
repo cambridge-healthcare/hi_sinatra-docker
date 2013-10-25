@@ -45,24 +45,25 @@ dependent containers as env options eg. `docker run -e REDIS_HOST=172.17.0.8 -d 
   tests must pass - both unit, integration and acceptance. At this
 point, we want to catch any integration bugs.
 
-* our CI environment, with the help of Docker, is actually a staging
-  environment. All running Docker containers xxxxxxxx
-
 * if everything worked as expected, including interactions with all
   external services, this Docker image will be made available to
 production. The service that is responsible for bringing up new Docker
 containers from the latest production images will take it from here.
 
-As all great unix tools, Docker does one thing really well: management
-of linux containers. We are now making public an equally simple bash
-utility for managing inter-container dependencies, Dockerize.
+Our CI environment, with the help of Docker, is actually a staging
+environment. Docker containers running on the CI are available only on
+our office network, anyone inside it can connect to them. All that it
+takes to get an instance for a specific app (and all its dependencies)
+is to push a new branch to Github.
 
 ### Dockerize
 
-[Dockerize][dockerize] aims to simplify Docker multi-container
-dependencies. It is a shell utility, with just 2 dependencies: bash &
-git. It acts as a Docker proxy, meaning that all commands which it does
-not understand get forwarded to the docker binary.
+Today, we are open-sourcing a simple bash utility for managing
+inter-container dependencies: [Dockerize][dockerize].
+
+It acts as a Docker proxy, meaning that all commands which it does not
+understand get forwarded to the docker binary. Dockerize has just 2
+dependencies: bash & git.
 
 The previously described workflow as a single shell command:
 
@@ -101,7 +102,7 @@ can be used to access the **hi_sinatra** app in your browser.
 
 Dockerize makes Jenkins integration with Docker incredibly simple. I
 will be assuming that you are running Jenkins in the Vagrant VM built
-from [this Vagrantfile][hi_sinatra-Dockerfile].
+from [this Vagrantfile][hi_sinatra-Vagrantfile].
 
 Add the following job through the Jenkins web interface:
 
@@ -132,3 +133,4 @@ also talk about our Docker production setup. Until next time!
 [part1]: http://blog.howareyou.com/post/62157486858/continuous-delivery-with-docker-and-jenkins-part-i
 [hi_sinatra-docker]: https://github.com/cambridge-healthcare/hi_sinatra-docker/tree/v0.2.0
 [dockerize]: https://github.com/cambridge-healthcare/dockerize
+[hi_sinatra-Vagrantfile]: https://github.com/cambridge-healthcare/hi_sinatra-docker/blob/v0.2.0/Vagrantfile
