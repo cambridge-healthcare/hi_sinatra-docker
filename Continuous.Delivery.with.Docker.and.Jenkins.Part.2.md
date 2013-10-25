@@ -113,7 +113,7 @@ add the following job through the Jenkins web interface:
 This is the shell command which you will need to use for the build execution:
 
 <pre>
-source $HOME/.profile && dockerize boot cambridge-healthcare/hi_sinatra-docker hi_sinatra
+/bin/bash -c "source $HOME/.profile && dockerize boot cambridge-healthcare/hi_sinatra-docker hi_sinatra"
 </pre>
 
 Every successful Jenkins build will now result in a running Docker container.
