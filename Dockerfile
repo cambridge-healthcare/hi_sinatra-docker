@@ -6,7 +6,7 @@ RUN \
   . /.profile ;\
   rm -fr /var/apps/hi_sinatra/.git ;\
   cd /var/apps/hi_sinatra ;\
-  bundle install --local ;\
+  bundle install --local ;
 # END RUN
 
 CMD . /.profile && cd /var/apps/hi_sinatra && bin/test && bin/boot
